@@ -194,7 +194,7 @@ module Binance
       #   :close   - The Proc called when a stream is closed (optional)
       def create_stream(url, methods:)
         Faye::WebSocket::Client.new(url)
-                               .tap { |ws| attach_methods(ws, methods) }
+                               .tap { |ws| attach_methods(url, ws, methods) }
       end
 
       # Internal: Iterate through methods passed and add them to the WebSocket
@@ -207,9 +207,13 @@ module Binance
       #   :message - The Proc called when a stream receives a message
       #   :error   - The Proc called when a stream receives an error (optional)
       #   :close   - The Proc called when a stream is closed (optional)
-      def attach_methods(websocket, methods)
+      def attach_methods(url, websocket, methods)
         methods.each_pair do |key, method|
-          websocket.on(key) { |event| method.call(event) }
+          websocket.on(key) do |event|
+            method.call(event)
+            create_stream(url, methods: methods) if event == :close
+          end
+          # websocket.on(key) { |event| method.call(event) }
         end
       end
     end
